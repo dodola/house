@@ -30,15 +30,18 @@ import hmac
 from flask_login import current_user, login_user, UserMixin
 from flask_socketio import disconnect
 
+
 class User(UserMixin):
 
     def __init__(self, id):
         self.id = id
-        
+
     def __repr__(self):
         return "User: %s" % (self.id)
 
+
 session_user = User(random_token)
+
 
 @login_manager.user_loader
 def user_loader(uuid):
@@ -47,6 +50,7 @@ def user_loader(uuid):
 
     return session_user
 
+
 def authenticated_only(f):
     @functools.wraps(f)
     def wrapped(*args, **kwargs):
@@ -54,11 +58,14 @@ def authenticated_only(f):
             disconnect()
         else:
             return f(*args, **kwargs)
+
     return wrapped
+
 
 @socketio.on('connect', namespace='/eventBus')
 def sock_connect():
     emit('log', {'data': 'Connected'})
+
 
 @socketio.on('authentication', namespace='/eventBus')
 def sock_auth(msg):
@@ -72,11 +79,11 @@ def sock_auth(msg):
         emit("auth_failed..")
 
 
-
 @socketio.on('enableAutoRefresh', namespace='/eventBus')
 @authenticated_only
 def enableAutoRefresh():
     house_global.monitor_refresh = 1
+
 
 @socketio.on('diableAutoRefresh', namespace='/eventBus')
 @authenticated_only
@@ -90,11 +97,12 @@ def refresh_device():
     getDevice()
     # emit('update_device', {'data': cgi.escape(str(house_global.device))})
 
+
 @socketio.on('check_monitor_running', namespace='/eventBus')
 @authenticated_only
 def check_monitor_running():
     # not working, house_global.monitor_script.unload() won't destroy it, did not find a destroy script method
-    print (stylize("[+]Checking if Monitor is running...", Info))
+    print(stylize("[+]Checking if Monitor is running...", Info))
     IPython.embed()
     if (house_global.monitor_script != '') & (house_global.monitor_script != None):
         emit('monitor_running_status', {'running': 1})
@@ -112,6 +120,7 @@ def set_device(msg):
     setDevice(device_id)
     # emit('update_device', {'data': cgi.escape(str(house_global.device))})
 
+
 @socketio.on('setPackage', namespace='/eventBus')
 @authenticated_only
 def setpkg(msg):
@@ -120,6 +129,7 @@ def setpkg(msg):
 
     emit('update_package', {'data': cgi.escape(str(house_global.package_name))})
 
+
 @socketio.on("setEnumConfig", namespace='/eventBus')
 @authenticated_only
 def update_EnumConfig(message):
@@ -127,7 +137,8 @@ def update_EnumConfig(message):
     class_to_find = message.get('class_to_find')
     class_pattern = message.get('class_pattern')
     if class_to_find != None:
-        house_global.enum_class = class_to_find if ('.' in class_to_find) else house_global.packagename + '.' + class_to_find
+        house_global.enum_class = class_to_find if (
+                    '.' in class_to_find) else house_global.packagename + '.' + class_to_find
     if class_pattern != None:
         house_global.enum_class_pattern = class_pattern
     if enum_option != None:
@@ -135,33 +146,38 @@ def update_EnumConfig(message):
     update_conf()
     emit("EnumConfigDone")
 
+
 @socketio.on('get_monitor_message', namespace='/eventBus')
 @authenticated_only
 def get_monitor_message():
     # ret_html = render_template('history.html', tree=make_tree(path,'enum'))
     # emit('update_monitor_message', {'mon_type': mon_type.upper(), 'monitor_message': house_global.monitor_message})
-    emit('update_monitor_message', {'monitor_message': house_global.monitor_message, 'monitor_new': list(house_global.monitor_queue)})
+    emit('update_monitor_message',
+         {'monitor_message': house_global.monitor_message, 'monitor_new': list(house_global.monitor_queue)})
     house_global.monitor_queue = set()
+
 
 @socketio.on('get_enum_history', namespace='/eventBus')
 @authenticated_only
 def get_enum_history():
     path = './cache/enum'
-    ret_html = render_template('history.html', tree=make_tree(path,'enum'))
+    ret_html = render_template('history.html', tree=make_tree(path, 'enum'))
     emit("update_enum_history", {'data': ret_html})
+
 
 @socketio.on('get_hooks_history', namespace='/eventBus')
 @authenticated_only
 def hooks_history():
     path = './cache/hook'
-    ret_html = render_template('history.html', tree=make_tree(path,'hook'))
+    ret_html = render_template('history.html', tree=make_tree(path, 'hook'))
     emit("update_hooks_history", {'data': ret_html})
+
 
 @socketio.on('get_intercept_history', namespace='/eventBus')
 @authenticated_only
 def get_intercept_history():
     path = './cache/intercept'
-    ret_html = render_template('history.html', tree=make_tree(path,'intercept'))
+    ret_html = render_template('history.html', tree=make_tree(path, 'intercept'))
     emit("update_intercept_history", {'data': ret_html})
 
 
@@ -171,11 +187,12 @@ def get_history_script(data):
     path = data.get("filepath")
     option = data.get("option")
     try:
-        with open(path,'r') as f:
+        with open(path, 'r') as f:
             script_content = f.read()
-            emit("update_script_content",{'script': script_content, "option": option})
+            emit("update_script_content", {'script': script_content, "option": option})
     except Exception as e:
-        emit("update_script_content",{'script': "[!] Failed to get script: " + str(e), "option": option})
+        emit("update_script_content", {'script': "[!] Failed to get script: " + str(e), "option": option})
+
 
 @socketio.on('save_script', namespace='/eventBus')
 @authenticated_only
@@ -193,7 +210,7 @@ def save_script(save_script_data):
         except Exception as e:
             raise e
     elif option == "enum":
-        
+
         try:
             with open("./cache/enum/" + filename, 'w') as f:
                 f.write(script)
@@ -206,7 +223,8 @@ def save_script(save_script_data):
         except Exception as e:
             raise e
     else:
-        print (stylize("Failed to save the file!", Error))
+        print(stylize("Failed to save the file!", Error))
+
 
 @socketio.on('deleteScript', namespace='/eventBus')
 @authenticated_only
@@ -227,14 +245,15 @@ def deleteScript(data):
         else:
             return
     else:
-        emit('new_error_message',{'data' : "[!] What are you trying to delete?"})
+        emit('new_error_message', {'data': "[!] What are you trying to delete?"})
         return
 
     try:
         os.remove(fn)
-        emit("refresh_history_script",{'option': op})
+        emit("refresh_history_script", {'option': op})
     except Exception as e:
-        emit('new_error_message',{'data' : "[!] Cannot delete: " + str(e)})
+        emit('new_error_message', {'data': "[!] Cannot delete: " + str(e)})
+
 
 @socketio.on('gen_script', namespace='/eventBus')
 @authenticated_only
@@ -246,6 +265,7 @@ def gen_script(message):
     build_hook_script()
     emit("update_hooks")
 
+
 @socketio.on('gen_script_mini', namespace='/eventBus')
 @authenticated_only
 def gen_script_mini(message):
@@ -256,17 +276,20 @@ def gen_script_mini(message):
     build_hook_mini_script()
     emit("update_hooks_mini")
 
+
 @socketio.on('unload_script', namespace='/eventBus')
 @authenticated_only
 def doUnload():
-    print (stylize("[+]Unloading script..", Info))
+    print(stylize("[+]Unloading script..", Info))
     unload_script()
+
 
 @socketio.on('clear_hookMessage', namespace='/eventBus')
 @authenticated_only
 def clear_hookMessage():
     house_global.messages = []
-    print (stylize("[+] Hook Message Cleard", Info))
+    print(stylize("[+] Hook Message Cleard", Info))
+
 
 @socketio.on('clear_monitorMessage', namespace='/eventBus')
 @authenticated_only
@@ -274,17 +297,19 @@ def clear_monitorMessage(message):
     clear_type = message.get('monitor_type').upper()
     if (clear_type != None) & (clear_type in house_global.monitor_message.keys()):
         house_global.monitor_message[clear_type] = []
-    
+
 
 @socketio.on('clear_EnumMessage', namespace='/eventBus')
 @authenticated_only
 def clear_EnumMessage():
     house_global.enum_messages = []
 
-@socketio.on('quitRepl', namespace = '/eventBus')
+
+@socketio.on('quitRepl', namespace='/eventBus')
 @authenticated_only
 def doneRepl():
     quitRepl()
+
 
 @socketio.on('loadHookScript', namespace='/eventBus')
 @authenticated_only
@@ -298,12 +323,13 @@ def doLoadHook(message):
         try:
             load_script()
         except Exception as e:
-            print ("doLoadHook exception caught!" + str(e))
+            print("doLoadHook exception caught!" + str(e))
             clear_hook_msg()
-            hook_exception = {"exception" : str(e)}
-            house_global.messages.insert(0,hook_exception)
+            hook_exception = {"exception": str(e)}
+            house_global.messages.insert(0, hook_exception)
 
-            emit("new_hook_message",hook_exception)
+            emit("new_hook_message", hook_exception)
+
 
 @socketio.on('loadEnumScript', namespace='/eventBus')
 @authenticated_only
@@ -317,10 +343,11 @@ def doLoadEnum(message):
         try:
             load_script()
         except Exception as e:
-            doLoadEnum_exception = {"exception" : str(e)}
-            house_global.enum_messages = [ ]
-            house_global.enum_messages.insert(0,doLoadEnum_exception)
+            doLoadEnum_exception = {"exception": str(e)}
+            house_global.enum_messages = []
+            house_global.enum_messages.insert(0, doLoadEnum_exception)
             emit("update_enum_messages")
+
 
 @socketio.on('doEnv', namespace='/eventBus')
 def doEnv():
@@ -331,16 +358,17 @@ def doEnv():
         load_script()
     except Exception as e:
         # IPython.embed()
-        emit('update_env_info',{'error': cgi.escape("[!]load_script Exception: {}".format(str(e)))})
+        emit('update_env_info', {'error': cgi.escape("[!]load_script Exception: {}".format(str(e)))})
+
 
 @socketio.on('loadStetho', namespace='/eventBus')
 def doLoadStetho():
-
     try:
         preload_stetho_script()
     except Exception as e:
         # IPython.embed()
-        emit('sideload_stetho_error',{'error': cgi.escape("[!]preload_stetho_script Exception: {}".format(str(e)))})
+        emit('sideload_stetho_error', {'error': cgi.escape("[!]preload_stetho_script Exception: {}".format(str(e)))})
+
 
 @socketio.on('runpreload', namespace='/eventBus')
 def runpreload(preload_message):
@@ -350,7 +378,7 @@ def runpreload(preload_message):
         run_preload_script()
     except Exception as e:
         # IPython.embed()
-        emit('runpreload',{'error': cgi.escape("[!]preload_script Exception: {}".format(str(e)))})
+        emit('runpreload', {'error': cgi.escape("[!]preload_script Exception: {}".format(str(e)))})
 
 
 @socketio.on('loadMonitor', namespace='/eventBus')
@@ -362,36 +390,37 @@ def doloadMonitor(monitor_message):
         # check_monitor_running()
     except Exception as e:
         # IPython.embed()
-        emit('doloadMonitor',{'error': cgi.escape("[!]doloadMonitor Exception: {}".format(str(e)))})
+        emit('doloadMonitor', {'error': cgi.escape("[!]doloadMonitor Exception: {}".format(str(e)))})
 
 
 @socketio.on('endpreload', namespace='/eventBus')
 def endpreload():
-    house_global.preload_conf = {"PRELOAD_STETHO": 0, "PRELOAD_SSLSTRIP": 1, "PRELOAD_SETPROXY" : 0}
+    house_global.preload_conf = {"PRELOAD_STETHO": 0, "PRELOAD_SSLSTRIP": 1, "PRELOAD_SETPROXY": 0}
     update_conf()
     try:
         unload_script("preload")
         # check_monitor_running()
     except Exception as e:
         # IPython.embed()
-        emit('endpreload',{'error': cgi.escape("[!]endpreload Exception: {}".format(str(e)))})
+        emit('endpreload', {'error': cgi.escape("[!]endpreload Exception: {}".format(str(e)))})
 
 
 @socketio.on('unloadMonitor', namespace='/eventBus')
 def dounloadMonitor():
-    house_global.monitor_conf = {"SWITCH_FILEIO": 0, "SWITCH_HTTP": 0, "SWITCH_MISC": 0, "SWITCH_WEBVIEW": 0, "SWITCH_SQL": 0, "SWITCH_IPC": 0}
+    house_global.monitor_conf = {"SWITCH_FILEIO": 0, "SWITCH_HTTP": 0, "SWITCH_MISC": 0, "SWITCH_WEBVIEW": 0,
+                                 "SWITCH_SQL": 0, "SWITCH_IPC": 0}
     update_conf()
     try:
         unload_script("monitor")
         # check_monitor_running()
     except Exception as e:
         # IPython.embed()
-        emit('dounloadMonitor',{'error': cgi.escape("[!]dounloadMonitor Exception: {}".format(str(e)))})
+        emit('dounloadMonitor', {'error': cgi.escape("[!]dounloadMonitor Exception: {}".format(str(e)))})
+
 
 @socketio.on('doInspect', namespace='/eventBus')
 @authenticated_only
 def doInspect(message):
-
     house_global.device = frida.get_usb_device()
 
     house_global.onMessageException = ''
@@ -399,7 +428,7 @@ def doInspect(message):
     ins_methodname = message.get('ins_methodname')
 
     if (ins_classname != None) & (ins_methodname != None):
-        house_global.inspect_conf['classname'] = ins_classname 
+        house_global.inspect_conf['classname'] = ins_classname
         house_global.inspect_conf['methodname'] = ins_methodname
 
         update_conf()
@@ -410,22 +439,26 @@ def doInspect(message):
             load_script()
         except Exception as e:
             house_global.inspect_result = "<p><code>[!] Exception: {}</code></p>".format(str(e))
-            print (stylize("Exception caught in doInspect: {}".format(e), Info))
-            update_inspect_result = {'classname': house_global.inspect_conf["classname"], 'methodname' : house_global.inspect_conf["methodname"], 'inspect_result': (str(house_global.inspect_result))}
+            print(stylize("Exception caught in doInspect: {}".format(e), Info))
+            update_inspect_result = {'classname': house_global.inspect_conf["classname"],
+                                     'methodname': house_global.inspect_conf["methodname"],
+                                     'inspect_result': (str(house_global.inspect_result))}
             cache_inspect_html()
             socketio.emit('update_inspect_result', update_inspect_result, namespace='/eventBus')
             house_global.onMessageException = ''
+
 
 @socketio.on('fetchInspect', namespace='/eventBus')
 @authenticated_only
 def fetchInspect():
     overloadIndex = house_global.inspect_conf.get("overloadIndex")
     if house_global.inspect_result == '':
-        with open("./config/inspect_cache.html",'w+') as f:
+        with open("./config/inspect_cache.html", 'w+') as f:
             house_global.inspect_result = f.read()
 
-
-    update_inspect_result = {'classname': house_global.inspect_conf["classname"], 'methodname' : house_global.inspect_conf["methodname"], 'inspect_result': house_global.inspect_result, 'overloadIndex' : overloadIndex}
+    update_inspect_result = {'classname': house_global.inspect_conf["classname"],
+                             'methodname': house_global.inspect_conf["methodname"],
+                             'inspect_result': house_global.inspect_result, 'overloadIndex': overloadIndex}
     emit('update_inspect_result', update_inspect_result)
 
 
@@ -446,7 +479,7 @@ def genIntercept(message):
         except Exception as e:
             raise e
 
-    print (stylize("[+]Lets do intercept",Info))
+    print(stylize("[+]Lets do intercept", Info))
     clazz_name = j_intercept.get("classname")
     methodname = j_intercept.get("methodname")
     overloadIndex = j_intercept.get("overloadIndex")
@@ -456,7 +489,7 @@ def genIntercept(message):
     house_global.intercept_script = prepare_script_fragment(clazz_name, methodname, "intercept", overloadIndex)
     socketio.emit('update_intercept_script', {'script': house_global.intercept_script}, namespace='/eventBus')
 
-   
+
 @socketio.on('load_intercept_script', namespace='/eventBus')
 @authenticated_only
 def load_intercept_script(message):
@@ -467,21 +500,22 @@ def load_intercept_script(message):
         load_script()
     except Exception as e:
         house_global.intercept_exception = "[!] intercept_exception: {}".format(str(e))
-        socketio.emit('new_intercept', {'data': house_global.intercept_exception, 'time': house_global.new_intercept_time}, namespace='/eventBus')
-
+        socketio.emit('new_intercept',
+                      {'data': house_global.intercept_exception, 'time': house_global.new_intercept_time},
+                      namespace='/eventBus')
 
 
 @socketio.on('intercept_param', namespace='/eventBus')
 @authenticated_only
 def sock_intercept(message):
-
     j_option = message['option']
     j_param = message['data']
-    time_stamp = message['time'].replace('"','')
+    time_stamp = message['time'].replace('"', '')
     if (j_option == "intercept_param"):
-        print (stylize("[+] Posting {} @ {} to Frida..".format(json.loads(j_param),time_stamp),Info))
+        print(stylize("[+] Posting {} @ {} to Frida..".format(json.loads(j_param), time_stamp), Info))
 
-        house_global.script.post({'type': 'input', 'payload': json.loads(j_param), 'time': time_stamp, 'option': "intercept_param"})
+        house_global.script.post(
+            {'type': 'input', 'payload': json.loads(j_param), 'time': time_stamp, 'option': "intercept_param"})
     elif (j_option == "intercept_repl"):
-        print (stylize("[+] Posting {} to Frida REPL..".format(j_param),Info))
+        print(stylize("[+] Posting {} to Frida REPL..".format(j_param), Info))
         house_global.script.post({'type': 'input', 'payload': j_param, 'time': time_stamp, 'option': "intercept_repl"})

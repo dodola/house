@@ -3,6 +3,6 @@ colored
 frida
 jinja2
 requests
-flask-socketio==4.3.2
+flask-socketio==5.3.1
 flask-login
 ipython
